@@ -1,105 +1,168 @@
-## Part 2: Design Your Web App / Game
+# Part 2: Design Your Web App / Game
 
-### 1. Choose a Project
+## 1. Choose a Project
 
 **Option C: Skiing Game Design**
-- A skiing game where players can design custom ski parks and mountains, ski in iconic locations worldwide, join crews, and compete in daily challenges with opportunities for exclusive seasonal rewards.
 
-### 2. Define the Purpose
+- A skiing game where players can ski in iconic locations worldwide, compete in time trials and skill challenges, and progress through increasing difficulties while unlocking new maps and gear.
+
+## 2. Define the Purpose
 
 **Describe the Goal**
-- To create a dynamic skiing game that allows players to design unique ski parks and mountains, bring their creative visions to life, and progress through skill-based unlocks while also fostering community interaction.
+
+- To create an engaging skiing game that focuses on core gameplay mechanics, allowing players to perform tricks, race against time, and compete on leaderboards, fostering a sense of progression and achievement.
 
 **Identify the Target Audience**
-- Targeted at ages 12-30, this game appeals to fans of skiing, snowboarding, and simulation games with a creative aspect.
 
-### 3. Conceptualize the Design
+- Targeted at ages 12-30, this game appeals to fans of skiing, snowboarding, and sports games that emphasize skill, competition, and progression.
 
-#### Aesthetics (Look)
+## 3. Conceptualize the Design
+
+### Aesthetics (Look)
 
 **Visual Style**
+
 - **Theme:** Realistic, immersive snowy landscapes.
-- **Imagery:** Skiers, snowboards, mountains, park features like jumps and rails, and realistic snow textures.
+- **Imagery:** Skiers, mountains, park features like jumps and rails, and realistic snow textures.
 
 **Color Scheme**
-- Cool blues, whites, and greys to represent snowy mountains, with options for sunset, night scenes, and seasonal variations.
+
+- Cool blues, whites, and greys to represent snowy mountains, with options for sunset and night scenes.
 
 **Typography**
+
 - Clean, modern fonts for readability and a sporty style.
 
 **Layout**
-- Simple navigation with building tools on the side for easy access. The skiing screen is immersive, focusing on landscape and skier.
 
-#### Functionality
+- Simple navigation with intuitive menus. The main gameplay screen focuses on the immersive skiing experience.
+
+### Functionality
 
 **Core Features**
-- **Build Mode:** Offers a catalog of customizable features, including:
-  - **Terrain Brushes** for creating unique slopes, moguls, and smooth runs.
-  - **Customizable Jumps:** Small, medium, and large jumps for varied play styles.
-  - **Boxes and Rails:** Boxes with customizable width and length, and rails with adjustable lengths and shapes, such as S-shaped, DFD, C, spiral, and rainbow.
-  - **Additional Features:** Cargo containers, walls, and stairs to add complexity and unique elements.
-  - **Free Camera:** Allows players to view their entire park without moving the character, providing a 3D overview for design accuracy.
 
-- **Ski Customization:** Different skis with unique stats, such as flex, springiness, and DIN, influencing skiing dynamics.
+- **Skill-Based Gameplay:**
+  - **Tricks and Stunts:** Perform a variety of tricks to earn points, including grabs, flips, and spins.
+  - **Combos and Multipliers:** Chain tricks together to increase scores with combo multipliers.
+  - **Time Trials:** Race down courses as quickly as possible, testing speed and precision.
+  - **Adaptive Difficulty:** Courses designed with varying difficulty levels to challenge players progressively.
 
-- **Pro Skier Selection:** Choose from characters with specialized skills, like Jesper Tjader for rail grinds or Alex Hall for big air tricks.
+- **Points and Leaderboards:**
+  - **Scoring System:** Points awarded based on the complexity and execution of tricks.
+  - **Global Leaderboards:** Track the highest total and individual trick scores globally.
+  - **Time Leaderboards:** Record the fastest times on each map for competitive racing.
+  - **Local Leaderboards:** Compare scores and times with friends for friendly competition.
 
-- **Street Skiing Mode:** Ski in diverse U.S. locations, from urban settings like NYC to rural areas like Montana.
+- **Progressive Unlock System:**
+  - **Map Unlocking:** Players start with beginner maps and unlock advanced maps by completing previous ones.
+  - **Difficulty Ratings:** Each map has a difficulty rating, encouraging players to improve skills to access harder levels.
+  - **Gear Unlocks:** Earn new skis and equipment by achieving high scores and completing challenges.
 
-- **Custom Music:** Players can select their background music to personalize the gameplay experience.
-
-- **Daily Competitions:** Players can participate in daily challenges to earn points, which can be redeemed for rewards.
-
-- **Map and Navigation:**
-  - **Fast Travel Map:** Players can quickly navigate around their current mountain, moving between park sections.
-  - **World Travel Option:** By zooming out, players can explore iconic skiing destinations across the globe, such as:
+- **Map Selection:**
+  - **Iconic Locations:** Ski in famous destinations worldwide, such as:
     - **Europe:** The French Alps.
     - **Japan:** Niseko.
-    - **United States:** Colorado, Utah, Vermont, and other U.S. regions.
+    - **United States:** Colorado, Utah, Vermont.
     - **South America:** Peru and Argentina.
+  - **Unique Challenges:** Each location offers distinct terrain and obstacles.
 
-- **Progressive Mountain Access and IKON Pass:**
-  - **Mountain Unlock System:** Players start with access to five mountains of their choice. By leveling up and performing tricks, they earn keys to unlock additional mountains over time.
-  - **IKON Pass:** A battle pass system providing access to 30 exclusive mountains for a one-month season, with:
-    - **Exclusive Cosmetics:** Each season offers limited-edition items, including hats, beanies, boots, poles, goggles, helmets, jackets, and pants, available only during that season.
-    - **Seasonal Skis:** One exclusive pair of skis each season, adding a collectible and prestigious item to players' gear.
+- **Ski Customization:**
+  - **Equipment Stats:** Different skis affect speed, control, and trick capabilities.
+  - **Unlockable Gear:** New equipment unlocked through gameplay achievements.
 
-- **Multiplayer and Social Features:**
-  - **Hosted Servers:** Players can host servers, allowing friends to join their custom parks and mountains for a shared skiing experience.
-  - **Local Leaderboard:** Each server includes a leaderboard to track friends’ scores, achievements, and best trick performances, fostering friendly competition and collaboration.
-
-- **Ski Crew Feature:**
-  - **Form a Ski Crew:** Players can create or join ski crews (clubs), each with a unique name and banner, promoting a sense of community and identity within the game.
-  - **Crew Competitions:** Crews can participate in challenges together, contributing to a shared leaderboard and earning rewards that can be displayed as crew achievements.
+- **Pro Skier Selection:**
+  - **Character Skills:** Choose from skiers with unique abilities enhancing certain tricks or speeds.
+  - **Skill Development:** Improve skier abilities by gaining experience and leveling up.
 
 - **Regional Snow Conditions:**
-  - **Snow Variation by Region:** Each region in the game has distinct snow types that affect skiing conditions, adding realism and variety:
-    - **Europe (French Alps):** Thick powder snow, ideal for deep powder skiing.
-    - **Japan (Niseko):** Thin, fine powder, perfect for light, soft landings and smooth turns.
-    - **East Coast U.S. & South America:** Compact, icier snow, offering a faster, more challenging surface.
-    - **West Coast & Western U.S.:** Mixed snow conditions with varying textures, requiring adaptive skiing techniques.
+  - **Dynamic Terrain:** Snow types affect movement and control, requiring adaptation.
+  - **Realistic Physics:** Enhanced immersion with accurate snow behavior per region.
+
+- **Challenges and Events:**
+  - **Daily Challenges:** Complete specific tasks for bonus points and rewards.
+  - **Skill Missions:** Objectives focused on mastering particular tricks or combinations.
 
 **User Flow**
-- Start with a main menu where players choose between “Build” or “Ski.”
-- In “Build” mode, players design terrain, adjust slopes, and customize the environment using the catalog.
-- In “Ski” mode, players navigate their custom terrain, perform tricks, and compete in daily challenges.
-- Access the map to fast-travel around mountains or explore international destinations, using keys or the IKON Pass to unlock new locations.
-- Join or create a ski crew to participate in crew challenges and track achievements with friends.
+
+- **Main Menu:**
+  - Options for “Play,” “Customization,” “Leaderboards,” and “Settings.”
+
+- **Play Mode:**
+  - Select from available maps and game modes (e.g., time trial, freestyle).
+  - Unlock new maps by completing challenges and meeting score thresholds.
+
+- **Customization:**
+  - Personalize skier appearance and equipment.
+  - View and equip unlocked gear.
+
+- **Leaderboards:**
+  - Access global and local rankings for scores and times.
+  - Compare achievements with friends and the broader community.
+
+- **Progression:**
+  - Earn points and experience through gameplay to unlock content.
+  - Track progress towards next unlocks and personal bests.
 
 **Interactive Elements**
-- Buttons for selecting park features, adjusting settings, and managing gameplay controls (speed, jump, tricks).
-- Menus for customization, saving/loading parks, sharing designs, and adjusting game settings.
 
-### 4. Create Design Sketches
+- **Controls:**
+  - Responsive controls for movement, jumping, and performing tricks.
+  - Tutorial levels to teach basic and advanced maneuvers.
+
+- **Menus:**
+  - Intuitive navigation through game options and settings.
+  - Visual indicators for new unlocks and achievements.
+
+- **Feedback:**
+  - On-screen prompts displaying combo multipliers and trick names.
+  - Real-time updates on score and time during runs.
+
+## 4. Create Design Sketches
 
 **Wireframes**
-- Main screen with navigation options for “Build” and “Ski,” and a catalog toolbar for adding terrain features.
+
+- **Main Menu Screen:**
+  - Central options for “Play,” “Customization,” “Leaderboards,” “Challenges,” and “Settings.”
+
+- **Map Selection Screen:**
+  - Display of available maps with difficulty ratings and locked/unlocked status.
+  - Visual preview of each location.
+
+- **In-Game HUD:**
+  - Minimalist design showing current score, time, and combo multipliers.
+  - Indicators for upcoming obstacles or terrain changes.
 
 **Mockups**
-- Detailed visuals showcasing snowy landscapes, custom terrain features, and player view.
+
+- **Gameplay Scene:**
+  - High-resolution visuals of a skier navigating a snowy mountain with realistic lighting and shadows.
+  - UI elements seamlessly integrated into the scene for immersion.
+
+- **Leaderboards Screen:**
+  - Clear presentation of rankings, player names, scores, and times.
+  - Options to filter between global and friends’ scores.
 
 ---
 
-## Comments
+# Comments Implemented
 
->I really like this concept. There's a game similar called Grand Mountain Adventure so I am going to base my comments on that. While I don't think this app should copy GMA, I think there are too many elements in this game. I don't really think the crew mode or world builder are really necessary or add much to the game. I would rather have more elements/ways to interact with the core game. The biggest thing I would add would be points for skills like in Skate or time trials. There should be a leaderboard for the fastest times on each map and highest total and individual trick score. All of the maps should have a difficulty rating that is unlocked by playing the previous difficulty like geometry dash. Addiction is key, while the design shouldn't copy GMA, there should be a more consistent, basic reward/goal like points, higher difficulties, or a leaderboard.
+The game design has been streamlined to focus on core gameplay elements that enhance player engagement and addiction:
+
+- **Simplified Features:** Removed unnecessary elements like the crew mode and world builder to concentrate on the main gameplay experience.
+
+- **Enhanced Interaction with Core Game:**
+  - Introduced points for skills and time trials similar to games like Skate.
+  - Added leaderboards for fastest times and highest trick scores to encourage competition.
+
+- **Progressive Difficulty:**
+  - Maps have difficulty ratings and are unlocked by completing previous levels, akin to Geometry Dash.
+  - This progression system motivates players to improve and continue playing.
+
+- **Consistent Rewards and Goals:**
+  - Implemented a basic reward system with points, higher difficulties, and leaderboards.
+  - Daily challenges and skill missions provide ongoing objectives and incentives.
+
+- **Addictive Gameplay Loop:**
+  - Focused on creating an engaging and addictive experience through skill development and competition.
+  - Leaderboards and unlockable content encourage repeated play and mastery of the game.
+s
