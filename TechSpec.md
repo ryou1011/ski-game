@@ -1,3 +1,5 @@
+FIGMA : https://www.figma.com/board/eAffxzeJBNH588hnOs6XNV/Untitled?node-id=0-1&t=TSkCfvUGktPEEAmh-1
+
 # Technical Specification for Skiing Game
 
 ## Technology Stack
