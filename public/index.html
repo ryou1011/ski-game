@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Skiing Game - Multiplayer</title>
+    <style>
+        body { margin: 0; background: #000; }
+        canvas { display: block; }
+        .ui-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            z-index: 100;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #score { font-size: 24px; }
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            z-index: 1000;
+        }
+        .menu button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4287f5;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        .menu button:hover {
+            background: #2b5aa7;
+            transform: scale(1.05);
+        }
+        .menu h2 {
+            margin-top: 0;
+            color: #4287f5;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #pause-menu, #main-menu, #loading, #game-over {
+            display: none;
+        }
+        .menu-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: #4287f5;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        .menu-button:hover {
+            background: #2b5aa7;
+        }
+        .high-scores {
+            margin: 20px 0;
+            text-align: left;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .high-scores h3 {
+            margin: 5px 0;
+            color: #4287f5;
+        }
+        .trick-text {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff4500;
+            font-size: 48px;
+            font-family: Arial, sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        .powerup {
+            position: absolute;
+            padding: 5px 10px;
+            background: rgba(66, 135, 245, 0.8);
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        #timer {
+            position: fixed;
+            top: 20px;
+            right: 100px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            z-index: 100;
+        }
+        .achievement {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: rgba(66, 135, 245, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            transform: translateX(200%);
+            transition: transform 0.5s ease;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="menu">
+        <h2>Loading...</h2>
+        <div style="width: 200px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px;">
+            <div id="loading-progress" style="width: 0%; height: 100%; background: #4287f5; border-radius: 10px; transition: width 0.3s;"></div>
+        </div>
+    </div>
+    
+    <div id="main-menu" class="menu">
+        <h2>Ski Adventure Multiplayer</h2>
+        <button id="start-game">Start Game</button>
+        <!-- Additional menu buttons if needed -->
+    </div>
+
+    <div id="pause-menu" class="menu">
+        <h2>Game Paused</h2>
+        <button id="resume">Resume</button>
+        <button id="restart">Restart</button>
+        <button id="main-menu-button">Main Menu</button>
+    </div>
+
+    <div id="game-over" class="menu">
+        <h2>Game Over!</h2>
+        <div id="final-score"></div>
+        <div id="final-stats"></div>
+        <button id="restart-game">Play Again</button>
+        <button id="game-over-menu">Main Menu</button>
+    </div>
+
+    <button class="menu-button" id="menu-button">☰ Menu</button>
+
+    <div class="ui-container">
+        <div id="score">Score: 0</div>
+        <div id="speed">Speed: 0</div>
+        <div id="trick-multiplier">Trick Multiplier: 1x</div>
+        <div id="coins">Coins: 0</div>
+    </div>
+
+    <div id="timer">Time: 180s</div>
+
+    <div id="controls">
+        W/S - Speed | A/D - Turn Skier | Arrow Keys - Rotate Camera | Space - Jump | Q/E/Z - Tricks | ESC - Pause
+    </div>
+
+    <div class="trick-text" id="trick-text"></div>
+
+    <!-- Include Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+
+    <script>
+        // SimplexNoise implementation (simplified version)
+        class SimplexNoise {
+            constructor(seed = Math.random()) {
+                this.p = new Uint8Array(256);
+                for (let i = 0; i < 256; i++) {
+                    this.p[i] = i;
+                }
+                for (let i = 0; i < 256; i++) {
+                    let r = i + ~~(seed * (256 - i));
+                    let temp = this.p[i];
+                    this.p[i] = this.p[r];
+                    this.p[r] = temp;
+                }
+                this.perm = new Uint8Array(512);
+                for (let i = 0; i < 512; i++) {
+                    this.perm[i] = this.p[i & 255];
+                }
+            }
+            noise2D(x, y) {
+                let X = Math.floor(x) & 255;
+                let Y = Math.floor(y) & 255;
+                x -= Math.floor(x);
+                y -= Math.floor(y);
+                let u = fade(x);
+                let v = fade(y);
+                let n00 = grad(this.perm[X + this.perm[Y]], x, y);
+                let n01 = grad(this.perm[X + this.perm[Y + 1]], x, y - 1);
+                let n10 = grad(this.perm[X + 1 + this.perm[Y]], x - 1, y);
+                let n11 = grad(this.perm[X + 1 + this.perm[Y + 1]], x - 1, y - 1);
+                let nx0 = lerp(n00, n10, u);
+                let nx1 = lerp(n01, n11, u);
+                let nxy = lerp(nx0, nx1, v);
+                return nxy;
+            }
+        }
+        function fade(t) {
+            return t * t * t * (t * (t * 6 - 15) + 10);
+        }
+        function lerp(a, b, t) {
+            return (1 - t) * a + t * b;
+        }
+        function grad(hash, x, y) {
+            let h = hash & 7;
+            let u = h < 4 ? x : y;
+            let v = h < 4 ? y : x;
+            return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+        }
+
+        (function() {
+            const THREE = window.THREE;
+
+            class Particle {
+                constructor(scene, position) {
+                    const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+                    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true });
+                    this.mesh = new THREE.Mesh(geometry, material);
+                    this.mesh.position.copy(position);
+                    this.velocity = new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.2,
+                        Math.random() * 0.2,
+                        (Math.random() - 0.5) * 0.2
+                    );
+                    this.lifetime = 1.0;
+                    scene.add(this.mesh);
+                }
+
+                update() {
+                    this.mesh.position.add(this.velocity);
+                    this.velocity.y -= 0.01;
+                    this.lifetime -= 0.02;
+                    this.mesh.material.opacity = this.lifetime;
+                    return this.lifetime > 0;
+                }
+            }
+
+            class PowerUp {
+                constructor(scene, position, type) {
+                    const geometry = new THREE.SphereGeometry(0.5, 8, 8);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: type === 'speed' ? 0xff0000 : 0x00ff00,
+                        emissive: type === 'speed' ? 0x600000 : 0x006000
+                    });
+                    this.mesh = new THREE.Mesh(geometry, material);
+                    this.mesh.position.copy(position);
+                    this.type = type;
+                    this.collected = false;
+                    scene.add(this.mesh);
+                }
+
+                update() {
+                    this.mesh.rotation.y += 0.02;
+                    this.mesh.position.y = Math.sin(Date.now() * 0.002) * 0.2 + 2;
+                }
+            }
+
+            class Ramp {
+                constructor(scene, position, rotation) {
+                    const geometry = new THREE.BoxGeometry(5, 1, 10);
+                    const material = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                    this.mesh = new THREE.Mesh(geometry, material);
+                    this.mesh.rotation.set(0, rotation, -Math.PI / 6); // Tilted upwards
+                    this.mesh.position.copy(position);
+                    this.mesh.castShadow = true;
+                    this.mesh.receiveShadow = true;
+                    scene.add(this.mesh);
+                }
+            }
+
+            class Tree {
+                constructor(scene, position) {
+                    // Simple cone for the tree
+                    const geometry = new THREE.ConeGeometry(2, 8, 8);
+                    const material = new THREE.MeshLambertMaterial({ color: 0x006400 }); // Dark green
+                    this.mesh = new THREE.Mesh(geometry, material);
+                    this.mesh.position.copy(position);
+                    this.mesh.castShadow = true;
+                    scene.add(this.mesh);
+                }
+            }
+
+            class GameManager {
+                constructor() {
+                    this.score = 0;
+                    this.coins = 0;
+                    this.highScores = JSON.parse(localStorage.getItem('skiHighScores')) || [];
+                    this.isPaused = false;
+                    this.isGameActive = false;
+                    this.trickMultiplier = 1;
+                    this.particles = [];
+                    this.powerUps = [];
+                    this.achievements = [];
+                    this.timeRemaining = 180;
+
+                    this.scene = new THREE.Scene();
+                    this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.005);
+
+                    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    this.renderer.setClearColor(0x87ceeb);
+                    this.renderer.shadowMap.enabled = true;
+                    document.body.appendChild(this.renderer.domElement);
+
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                    this.scene.add(ambientLight);
+
+                    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                    directionalLight.position.set(100, 100, 50);
+                    directionalLight.castShadow = true;
+                    this.scene.add(directionalLight);
+
+                    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+                    this.scene.add(hemisphereLight);
+
+                    this.mapSize = 1000; // Increased map size
+
+                    this.simplex = new SimplexNoise();
+
+                    // Camera control variables
+                    this.cameraOffsetAngle = 0;
+                    this.cameraTargetOffsetAngle = 0;
+
+                    // Multiplayer variables
+                    this.players = {};
+                    this.playerId = null;
+
+                    // Connect to the WebSocket server
+                    this.connectToWebSocket();
+
+                    this.setupMenuHandlers();
+                    this.showMainMenu();
+
+                    // Start loading progress simulation
+                    this.simulateLoading();
+                }
+
+                connectToWebSocket() {
+                    this.socket = new WebSocket('ws://localhost:8080');
+
+                    this.socket.addEventListener('open', () => {
+                        console.log('Connected to WebSocket server');
+                    });
+
+                    this.socket.addEventListener('message', (event) => {
+                        const data = JSON.parse(event.data);
+
+                        switch (data.type) {
+                            case 'init':
+                                // Receive player ID from the server
+                                this.playerId = data.id;
+                                break;
+                            case 'player_joined':
+                                if (data.id !== this.playerId) {
+                                    // Add new player
+                                    this.addOtherPlayer(data.id);
+                                }
+                                break;
+                            case 'update':
+                                // Update other player's position
+                                if (data.id !== this.playerId && this.players[data.id]) {
+                                    this.players[data.id].mesh.position.set(data.position.x, data.position.y, data.position.z);
+                                    this.players[data.id].mesh.rotation.y = data.position.rotationY;
+                                }
+                                break;
+                            case 'player_left':
+                                // Remove player
+                                if (this.players[data.id]) {
+                                    this.scene.remove(this.players[data.id].mesh);
+                                    delete this.players[data.id];
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    });
+
+                    this.socket.addEventListener('close', () => {
+                        console.log('Disconnected from WebSocket server');
+                    });
+                }
+
+                addOtherPlayer(id) {
+                    const otherSkier = new Skier(this.mapSize, this.mountainHeight.bind(this), true);
+                    this.players[id] = otherSkier;
+                    this.scene.add(otherSkier.mesh);
+                }
+
+                simulateLoading() {
+                    const progress = document.getElementById('loading-progress');
+                    let width = 0;
+                    const interval = setInterval(() => {
+                        width += 2;
+                        progress.style.width = `${width}%`;
+                        if (width >= 100) {
+                            clearInterval(interval);
+                            document.getElementById('loading').style.display = 'none';
+                            document.getElementById('main-menu').style.display = 'block';
+                        }
+                    }, 50);
+                }
+
+                showMainMenu() {
+                    this.hideMenus();
+                    document.getElementById('main-menu').style.display = 'block';
+                }
+
+                hideMenus() {
+                    document.getElementById('main-menu').style.display = 'none';
+                    document.getElementById('pause-menu').style.display = 'none';
+                    document.getElementById('game-over').style.display = 'none';
+                    document.getElementById('loading').style.display = 'none';
+                }
+
+                showPauseMenu() {
+                    this.isPaused = true;
+                    document.getElementById('pause-menu').style.display = 'block';
+                }
+
+                setupMenuHandlers() {
+                    document.getElementById('start-game').onclick = () => this.startGame();
+                    document.getElementById('resume').onclick = () => {
+                        this.isPaused = false;
+                        document.getElementById('pause-menu').style.display = 'none';
+                        this.animate();
+                    };
+                    document.getElementById('restart').onclick = () => this.startGame();
+                    document.getElementById('main-menu-button').onclick = () => this.showMainMenu();
+                    document.getElementById('menu-button').onclick = () => this.showPauseMenu();
+                    document.getElementById('restart-game').onclick = () => this.startGame();
+                    document.getElementById('game-over-menu').onclick = () => this.showMainMenu();
+                }
+
+                startGame() {
+                    try {
+                        // Clear previous game data
+                        this.hideMenus();
+                        this.isGameActive = true;
+                        this.isPaused = false;
+                        this.score = 0;
+                        this.coins = 0;
+                        this.timeRemaining = 180;
+                        this.trickMultiplier = 1;
+                        this.particles = [];
+                        this.powerUps = [];
+                        this.achievements = [];
+                        this.coinsMeshes = [];
+                        this.ramps = [];
+                        this.trees = [];
+
+                        // Reset camera angles
+                        this.cameraOffsetAngle = 0;
+                        this.cameraTargetOffsetAngle = 0;
+
+                        // Clear scene
+                        while (this.scene.children.length > 0) {
+                            this.scene.remove(this.scene.children[0]);
+                        }
+
+                        // Re-add lights
+                        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                        this.scene.add(ambientLight);
+
+                        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                        directionalLight.position.set(100, 100, 50);
+                        directionalLight.castShadow = true;
+                        this.scene.add(directionalLight);
+
+                        const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+                        this.scene.add(hemisphereLight);
+
+                        // Create terrain
+                        this.createTerrain();
+
+                        // Create trees
+                        this.createTrees();
+
+                        // Create skier
+                        this.skier = new Skier(this.mapSize, this.mountainHeight.bind(this));
+                        this.scene.add(this.skier.mesh);
+
+                        // Create coins
+                        this.coinsMeshes = [];
+                        for (let i = 0; i < 200; i++) {
+                            const x = (Math.random() - 0.5) * this.mapSize;
+                            const z = (Math.random() - 0.5) * this.mapSize;
+                            const coin = this.addCoin(x, z);
+                            this.coinsMeshes.push(coin);
+                        }
+
+                        // Create ramps
+                        this.createRamps();
+
+                        // Update UI
+                        document.getElementById('score').textContent = `Score: ${this.score}`;
+                        document.getElementById('coins').textContent = `Coins: ${this.coins}`;
+                        document.getElementById('speed').textContent = `Speed: 0`;
+                        document.getElementById('trick-multiplier').textContent = `Trick Multiplier: 1x`;
+                        document.getElementById('timer').textContent = `Time: ${this.timeRemaining}s`;
+
+                        // Start game timer
+                        clearInterval(this.gameTimer);
+                        this.gameTimer = setInterval(() => {
+                            if (!this.isPaused && this.isGameActive) {
+                                this.timeRemaining--;
+                                this.updateTimer();
+
+                                if (this.timeRemaining <= 0) {
+                                    this.gameOver();
+                                }
+                            }
+                        }, 1000);
+
+                        // Reset multiplayer data
+                        this.players = {};
+                        this.playerId = null;
+
+                        // Reconnect to the WebSocket server
+                        if (this.socket) {
+                            this.socket.close();
+                        }
+                        this.connectToWebSocket();
+
+                        // Start animation loop
+                        this.animate();
+                    } catch (error) {
+                        console.error('Error starting game:', error);
+                    }
+                }
+
+                createTerrain() {
+                    try {
+                        const size = this.mapSize;
+                        const divisions = 256;
+
+                        const geometry = new THREE.PlaneGeometry(size, size, divisions, divisions);
+                        geometry.rotateX(-Math.PI / 2);
+
+                        // Modify vertices using Perlin noise for mountainous terrain
+                        const positionAttribute = geometry.attributes.position;
+                        for (let i = 0; i < positionAttribute.count; i++) {
+                            const x = positionAttribute.getX(i);
+                            const z = positionAttribute.getZ(i);
+
+                            const y = this.mountainHeight(x, z);
+                            positionAttribute.setY(i, y);
+                        }
+                        geometry.computeVertexNormals();
+
+                        const material = new THREE.MeshLambertMaterial({ color: 0xffffff }); // Changed ground to white
+                        this.terrain = new THREE.Mesh(geometry, material);
+                        this.terrain.receiveShadow = true;
+                        this.scene.add(this.terrain);
+                    } catch (error) {
+                        console.error('Error creating terrain:', error);
+                    }
+                }
+
+                mountainHeight(x, z) {
+                    const scale = 0.005;
+                    const heightScale = 100;
+                    const noiseValue = this.simplex.noise2D(x * scale, z * scale);
+                    return noiseValue * heightScale;
+                }
+
+                createRamps() {
+                    for (let i = 0; i < 50; i++) {
+                        const x = (Math.random() - 0.5) * this.mapSize;
+                        const z = (Math.random() - 0.5) * this.mapSize;
+                        const y = this.mountainHeight(x, z);
+                        const rotation = Math.random() * Math.PI * 2;
+                        const position = new THREE.Vector3(x, y + 0.5, z);
+                        const ramp = new Ramp(this.scene, position, rotation);
+                        this.ramps.push(ramp);
+                    }
+                }
+
+                createTrees() {
+                    // Create minimal trees along a path-like shape
+                    const pathPoints = [];
+                    const numPoints = 100;
+                    const pathWidth = 50;
+                    let x = 0;
+                    let z = -this.mapSize / 2;
+
+                    for (let i = 0; i < numPoints; i++) {
+                        z += 10;
+                        x += (Math.random() - 0.5) * 5; // Slight deviation
+                        pathPoints.push({ x, z });
+                    }
+
+                    // Place trees along the path
+                    const treeSpacing = 20;
+                    for (let i = 0; i < pathPoints.length; i += treeSpacing) {
+                        const point = pathPoints[i];
+                        // Left side of the path
+                        const leftX = point.x - pathWidth / 2;
+                        const leftZ = point.z + (Math.random() - 0.5) * 5;
+                        const leftY = this.mountainHeight(leftX, leftZ);
+                        const leftPosition = new THREE.Vector3(leftX, leftY, leftZ);
+                        const leftTree = new Tree(this.scene, leftPosition);
+                        this.trees.push(leftTree);
+
+                        // Right side of the path
+                        const rightX = point.x + pathWidth / 2;
+                        const rightZ = point.z + (Math.random() - 0.5) * 5;
+                        const rightY = this.mountainHeight(rightX, rightZ);
+                        const rightPosition = new THREE.Vector3(rightX, rightY, rightZ);
+                        const rightTree = new Tree(this.scene, rightPosition);
+                        this.trees.push(rightTree);
+                    }
+                }
+
+                updateTimer() {
+                    document.getElementById('timer').textContent = `Time: ${this.timeRemaining}s`;
+                }
+
+                gameOver() {
+                    this.isGameActive = false;
+                    clearInterval(this.gameTimer);
+                    this.updateHighScores();
+
+                    document.getElementById('game-over').style.display = 'block';
+                    document.getElementById('final-score').textContent = `Final Score: ${this.score}`;
+                    document.getElementById('final-stats').textContent = `Coins Collected: ${this.coins}`;
+                }
+
+                updateHighScores() {
+                    this.highScores.push({ score: this.score, coins: this.coins });
+                    this.highScores.sort((a, b) => b.score - a.score);
+                    this.highScores = this.highScores.slice(0, 5);
+                    localStorage.setItem('skiHighScores', JSON.stringify(this.highScores));
+
+                    // Update high scores list
+                    const highScoresList = document.getElementById('high-scores-list');
+                    if (highScoresList) {
+                        highScoresList.innerHTML = '';
+                        this.highScores.forEach((entry, index) => {
+                            const div = document.createElement('div');
+                            div.textContent = `${index + 1}. Score: ${entry.score}, Coins: ${entry.coins}`;
+                            highScoresList.appendChild(div);
+                        });
+                    }
+                }
+
+                updateCamera() {
+                    const desiredOffsetAngle = this.cameraTargetOffsetAngle;
+                    this.cameraOffsetAngle += (desiredOffsetAngle - this.cameraOffsetAngle) * 0.1; // Smooth interpolation
+
+                    const distance = 30; // Adjust this value as needed for desired distance
+                    const height = 10;   // Adjust this value as needed for desired height
+
+                    const skierPosition = this.skier.mesh.position;
+                    const skierRotation = this.skier.mesh.rotation.y;
+
+                    const cameraAngle = skierRotation + this.cameraOffsetAngle;
+
+                    const cameraX = skierPosition.x + distance * Math.sin(cameraAngle);
+                    const cameraZ = skierPosition.z + distance * Math.cos(cameraAngle);
+                    let cameraY = skierPosition.y + height;
+
+                    // Prevent camera from clipping into the ground
+                    const terrainHeightAtCameraPosition = this.mountainHeight(cameraX, cameraZ);
+                    const minCameraHeightAboveGround = 2; // Minimum height above the terrain
+                    cameraY = Math.max(cameraY, terrainHeightAtCameraPosition + minCameraHeightAboveGround);
+
+                    this.camera.position.lerp(new THREE.Vector3(cameraX, cameraY, cameraZ), 0.1);
+                    this.camera.lookAt(skierPosition);
+                }
+
+                addPowerUp() {
+                    const x = Math.random() * (this.mapSize * 1.5) - this.mapSize * 0.75;
+                    const z = Math.random() * (this.mapSize * 1.5) - this.mapSize * 0.75;
+                    const y = this.mountainHeight(x, z);
+                    const type = Math.random() < 0.5 ? 'speed' : 'points';
+
+                    const powerUp = new PowerUp(this.scene, new THREE.Vector3(x, y + 2, z), type);
+                    this.powerUps.push(powerUp);
+                }
+
+                addCoin(x, z) {
+                    const geometry = new THREE.TorusGeometry(2, 0.5, 8, 16);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xffd700,
+                        emissive: 0x996515
+                    });
+                    const coin = new THREE.Mesh(geometry, material);
+
+                    const y = this.mountainHeight(x, z);
+                    coin.position.set(x, y + 5, z);
+                    coin.rotation.x = Math.PI / 2;
+
+                    this.scene.add(coin);
+                    return coin;
+                }
+
+                showTrickText(text) {
+                    const trickText = document.getElementById('trick-text');
+                    trickText.textContent = text;
+                    trickText.style.opacity = '1';
+
+                    setTimeout(() => {
+                        trickText.style.opacity = '0';
+                    }, 1000);
+                }
+
+                animate() {
+                    if (!this.isGameActive) return;
+
+                    if (this.isPaused) return;
+
+                    requestAnimationFrame(() => this.animate());
+
+                    // Update particles
+                    this.particles = this.particles.filter(particle => particle.update());
+
+                    // Update power-ups
+                    this.powerUps.forEach(powerUp => {
+                        if (!powerUp.collected) {
+                            powerUp.update();
+
+                            if (this.skier.mesh.position.distanceTo(powerUp.mesh.position) < 5) {
+                                powerUp.collected = true;
+                                powerUp.mesh.visible = false;
+
+                                if (powerUp.type === 'speed') {
+                                    this.skier.maxSpeed *= 1.5;
+                                    setTimeout(() => {
+                                        this.skier.maxSpeed /= 1.5;
+                                    }, 5000);
+                                    this.showTrickText('Speed Boost!');
+                                } else {
+                                    this.score += 500;
+                                    this.showTrickText('+500 Points!');
+                                }
+                            }
+                        }
+                    });
+
+                    // Update coins rotation and check collection
+                    this.coinsMeshes.forEach(coin => {
+                        if (coin.visible) {
+                            coin.rotation.y += 0.02;
+
+                            if (this.skier.mesh.position.distanceTo(coin.position) < 5) {
+                                coin.visible = false;
+                                this.coins++;
+                                document.getElementById('coins').textContent = `Coins: ${this.coins}`;
+                                this.score += 100;
+
+                                for (let i = 0; i < 5; i++) {
+                                    this.particles.push(new Particle(this.scene, coin.position));
+                                }
+                            }
+                        }
+                    });
+
+                    // Randomly spawn power-ups
+                    if (Math.random() < 0.001) {
+                        this.addPowerUp();
+                    }
+
+                    this.skier.update();
+                    this.sendPlayerUpdate(); // Send position to server
+                    this.updateCamera();
+
+                    // Update UI
+                    document.getElementById('score').textContent = `Score: ${this.score}`;
+                    document.getElementById('speed').textContent = `Speed: ${Math.round(this.skier.speed * 100)}`;
+                    document.getElementById('trick-multiplier').textContent = `Trick Multiplier: ${this.trickMultiplier}x`;
+
+                    // Check achievements
+                    this.checkAchievements();
+
+                    this.renderer.render(this.scene, this.camera);
+                }
+
+                sendPlayerUpdate() {
+                    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                        const position = {
+                            x: this.skier.mesh.position.x,
+                            y: this.skier.mesh.position.y,
+                            z: this.skier.mesh.position.z,
+                            rotationY: this.skier.mesh.rotation.y
+                        };
+                        this.socket.send(JSON.stringify({ type: 'update', position }));
+                    }
+                }
+
+                checkAchievements() {
+                    if (this.score >= 10000 && !this.achievements.includes('score_10000')) {
+                        this.achievements.push('score_10000');
+                        this.showAchievement('Score Master - Reach 10,000 points');
+                    }
+
+                    if (this.coins >= 50 && !this.achievements.includes('coins_50')) {
+                        this.achievements.push('coins_50');
+                        this.showAchievement('Coin Collector - Collect 50 coins');
+                    }
+
+                    if (this.skier.consecutiveTricks >= 5 && !this.achievements.includes('tricks_5')) {
+                        this.achievements.push('tricks_5');
+                        this.showAchievement('Trick Master - 5 consecutive tricks');
+                    }
+                }
+
+                showAchievement(text) {
+                    const achievement = document.createElement('div');
+                    achievement.className = 'achievement';
+                    achievement.textContent = `Achievement: ${text}`;
+                    document.body.appendChild(achievement);
+
+                    // Animate in
+                    setTimeout(() => {
+                        achievement.style.transform = 'translateX(0)';
+                    }, 100);
+
+                    // Animate out and remove
+                    setTimeout(() => {
+                        achievement.style.transform = 'translateX(200%)';
+                        setTimeout(() => achievement.remove(), 500);
+                    }, 3000);
+                }
+            }
+
+            class Skier {
+                constructor(mapSize, mountainHeightFunc, isOtherPlayer = false) {
+                    const bodyGeometry = new THREE.BoxGeometry(1, 3, 1);
+                    const bodyMaterial = new THREE.MeshPhongMaterial({ color: isOtherPlayer ? 0xff0000 : 0x3366cc });
+                    this.mesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
+
+                    const skiGeometry = new THREE.BoxGeometry(0.5, 0.2, 4);
+                    const skiMaterial = new THREE.MeshPhongMaterial({ color: 0x111111 });
+                    this.leftSki = new THREE.Mesh(skiGeometry, skiMaterial);
+                    this.rightSki = new THREE.Mesh(skiGeometry, skiMaterial);
+
+                    this.leftSki.position.set(-0.6, -1.5, 0);
+                    this.rightSki.position.set(0.6, -1.5, 0);
+
+                    this.mesh.add(this.leftSki);
+                    this.mesh.add(this.rightSki);
+
+                    this.mapSize = mapSize;
+                    this.speed = 0;
+                    this.maxSpeed = 1.5;
+                    this.minSpeed = 0;
+                    this.turning = 0;
+                    this.isJumping = false;
+                    this.verticalSpeed = 0;
+                    this.gravity = -0.01;
+                    this.consecutiveTricks = 0;
+                    this.trickRotation = new THREE.Vector3(0, 0, 0);
+                    this.mountainHeight = mountainHeightFunc;
+
+                    this.isOtherPlayer = isOtherPlayer;
+
+                    // Set initial position above the terrain
+                    const initialTerrainHeight = this.mountainHeight(0, 0);
+                    this.mesh.position.set(0, initialTerrainHeight + 2, -this.mapSize / 2 + 10);
+                    this.mesh.castShadow = true;
+                    this.mesh.receiveShadow = true;
+
+                    this.jumpCharge = 0;
+                    this.maxJumpCharge = 0.5; // Maximum additional jump power
+
+                    this.trickName = '';
+
+                    if (!isOtherPlayer) {
+                        this.initInput();
+                    }
+                }
+
+                initInput() {
+                    this.keysPressed = {};
+
+                    document.addEventListener('keydown', (event) => this.onKeyDown(event), false);
+                    document.addEventListener('keyup', (event) => this.onKeyUp(event), false);
+                }
+
+                onKeyDown(event) {
+                    this.keysPressed[event.code] = true;
+
+                    switch (event.code) {
+                        case 'Escape':
+                            window.gameManager.showPauseMenu();
+                            break;
+                        // Handle camera rotation keys
+                        case 'ArrowLeft':
+                            window.gameManager.cameraTargetOffsetAngle -= 0.1;
+                            break;
+                        case 'ArrowRight':
+                            window.gameManager.cameraTargetOffsetAngle += 0.1;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                onKeyUp(event) {
+                    this.keysPressed[event.code] = false;
+
+                    switch (event.code) {
+                        case 'Space':
+                            if (!this.isJumping) {
+                                // Perform jump with charged power
+                                this.isJumping = true;
+                                this.verticalSpeed = 0.3 + this.jumpCharge;
+                                this.jumpCharge = 0;
+                            }
+                            break;
+                        // Handle camera rotation keys
+                        case 'ArrowLeft':
+                        case 'ArrowRight':
+                            // Reset camera target angle to zero to reorient behind the skier
+                            window.gameManager.cameraTargetOffsetAngle = 0;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                update() {
+                    if (this.isOtherPlayer) {
+                        // Other players are updated via network messages
+                        return;
+                    }
+
+                    // Apply acceleration or deceleration
+                    if (this.keysPressed['KeyW']) {
+                        this.speed = Math.min(this.speed + 0.01, this.maxSpeed);
+                    } else if (this.keysPressed['KeyS']) {
+                        this.speed = Math.max(this.speed - 0.01, this.minSpeed);
+                    } else {
+                        // Apply friction
+                        this.speed *= 0.99;
+                    }
+
+                    // Turning the skier
+                    if (this.keysPressed['KeyA']) {
+                        this.mesh.rotation.y += 0.02;
+                    }
+                    if (this.keysPressed['KeyD']) {
+                        this.mesh.rotation.y -= 0.02;
+                    }
+
+                    // Jump charging
+                    if (this.keysPressed['Space'] && !this.isJumping) {
+                        this.jumpCharge = Math.min(this.jumpCharge + 0.005, this.maxJumpCharge);
+                    }
+
+                    // Calculate new position
+                    const moveDistance = this.speed;
+                    const newX = this.mesh.position.x - moveDistance * Math.sin(this.mesh.rotation.y);
+                    const newZ = this.mesh.position.z - moveDistance * Math.cos(this.mesh.rotation.y);
+
+                    // Check boundaries
+                    if (Math.abs(newX) < this.mapSize / 2 && Math.abs(newZ) < this.mapSize / 2) {
+                        this.mesh.position.x = newX;
+                        this.mesh.position.z = newZ;
+                    } else {
+                        // Bounce off the boundaries
+                        this.mesh.rotation.y += Math.PI;
+                        this.speed *= 0.5;
+                    }
+
+                    if (this.isJumping) {
+                        this.verticalSpeed += this.gravity;
+                        this.mesh.position.y += this.verticalSpeed;
+
+                        // Rotate during tricks
+                        this.mesh.rotation.x += this.trickRotation.x;
+                        this.mesh.rotation.y += this.trickRotation.y;
+                        this.mesh.rotation.z += this.trickRotation.z;
+
+                        // Get terrain height at current position
+                        const terrainHeightAtPosition = this.mountainHeight(this.mesh.position.x, this.mesh.position.z);
+
+                        if (this.mesh.position.y <= terrainHeightAtPosition + 2) {
+                            this.mesh.position.y = terrainHeightAtPosition + 2;
+                            this.isJumping = false;
+                            this.verticalSpeed = 0;
+
+                            // Reset rotations
+                            this.mesh.rotation.x = 0;
+                            this.mesh.rotation.z = 0;
+
+                            // Show trick text if performed
+                            if (this.consecutiveTricks > 0) {
+                                window.gameManager.showTrickText(`${this.trickName}!`);
+                                window.gameManager.score += 500 * window.gameManager.trickMultiplier;
+                                window.gameManager.trickMultiplier++;
+                            }
+
+                            this.consecutiveTricks = 0;
+                            this.trickRotation.set(0, 0, 0);
+                            this.trickName = '';
+                        }
+                    } else {
+                        // Ensure skier stays on terrain
+                        const terrainHeightAtPosition = this.mountainHeight(this.mesh.position.x, this.mesh.position.z);
+                        this.mesh.position.y = terrainHeightAtPosition + 2;
+
+                        // Check if on ramp
+                        const onRamp = window.gameManager.ramps.some(ramp => {
+                            const rampPos = ramp.mesh.position;
+                            const distance = this.mesh.position.distanceTo(rampPos);
+                            return distance < 5;
+                        });
+
+                        if (onRamp && this.speed > 0.1 && !this.isJumping) {
+                            this.isJumping = true;
+                            this.verticalSpeed = this.speed * 0.5;
+                        }
+                    }
+
+                    // Perform tricks
+                    if (this.isJumping) {
+                        if (this.keysPressed['KeyQ']) {
+                            // Backflip (rotation around X-axis)
+                            this.trickRotation.x = -Math.PI / 64;
+                            this.trickName = 'Backflip';
+                            this.consecutiveTricks++;
+                        }
+                        if (this.keysPressed['KeyE']) {
+                            // Spin (rotation around Y-axis)
+                            this.trickRotation.y = -Math.PI / 64;
+                            this.trickName = 'Spin';
+                            this.consecutiveTricks++;
+                        }
+                        if (this.keysPressed['KeyZ']) {
+                            // Barrel roll (rotation around Z-axis)
+                            this.trickRotation.z = -Math.PI / 64;
+                            this.trickName = 'Barrel Roll';
+                            this.consecutiveTricks++;
+                        }
+                    }
+
+                    // Add snow trail
+                    if (this.speed > 0.1 && !this.isJumping) {
+                        const particle = new Particle(
+                            window.gameManager.scene,
+                            new THREE.Vector3(
+                                this.mesh.position.x,
+                                this.mesh.position.y - 2,
+                                this.mesh.position.z
+                            )
+                        );
+                        window.gameManager.particles.push(particle);
+                    }
+                }
+            }
+
+            window.gameManager = new GameManager();
+
+            window.addEventListener('resize', () => {
+                window.gameManager.camera.aspect = window.innerWidth / window.innerHeight;
+                window.gameManager.camera.updateProjectionMatrix();
+                window.gameManager.renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        })();
+    </script>
+</body>
+</html>
