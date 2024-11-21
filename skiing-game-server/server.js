@@ -8,29 +8,45 @@ let players = {};
 
 wss.on('connection', (ws) => {
     const playerId = generateUniqueId();
-    players[playerId] = { ws };
-
-    // Send the new player their ID
-    ws.send(JSON.stringify({ type: 'init', id: playerId }));
-
-    // Notify the new player about existing players
-    Object.keys(players).forEach((id) => {
-        if (id !== playerId) {
-            ws.send(JSON.stringify({ type: 'player_joined', id }));
-        }
-    });
-
-    // Broadcast to all players that a new player has joined
-    broadcast(JSON.stringify({ type: 'player_joined', id: playerId }), playerId);
+    players[playerId] = { ws, username: null };
 
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
 
             switch (data.type) {
+                case 'init':
+                    // Set the player's username
+                    players[playerId].username = data.username;
+
+                    // Send the new player their ID
+                    ws.send(JSON.stringify({ type: 'init', id: playerId }));
+
+                    // Notify the new player about existing players
+                    Object.keys(players).forEach((id) => {
+                        if (id !== playerId && players[id].username) {
+                            ws.send(JSON.stringify({
+                                type: 'player_joined',
+                                id,
+                                username: players[id].username
+                            }));
+                        }
+                    });
+
+                    // Broadcast to all players that a new player has joined
+                    broadcast(JSON.stringify({
+                        type: 'player_joined',
+                        id: playerId,
+                        username: data.username
+                    }), playerId);
+                    break;
                 case 'update':
                     // Broadcast the player's position to others
-                    broadcast(JSON.stringify({ type: 'update', id: playerId, position: data.position }), playerId);
+                    broadcast(JSON.stringify({
+                        type: 'update',
+                        id: playerId,
+                        position: data.position
+                    }), playerId);
                     break;
                 default:
                     break;
