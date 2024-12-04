@@ -882,15 +882,16 @@
                     requestAnimationFrame(() => this.animate());
 
                     const now = performance.now();
-                    const delta = (now - this.lastFrameTime) / 1000; // Convert to seconds
+                    let delta = (now - this.lastFrameTime) / 1000; // Convert to seconds
                     this.lastFrameTime = now;
 
-                    // Update only if enough time has passed (e.g., target 60 FPS)
-                    if (delta < 1 / 60) return;
+                    // Cap delta to prevent large time steps
+                    if (delta > 1 / 30) delta = 1 / 30; // Cap at ~33ms for stability
 
-                    // Update game elements
+                    // Proceed with updating game elements
                     this.updateGameElements(delta);
                 }
+
 
                 updateGameElements(delta) {
                     // Update skier
@@ -1105,13 +1106,13 @@
 
                     this.mapSize = mapSize;
                     this.speed = 0;
-                    this.maxSpeed = 1.5;
+                    this.maxSpeed = 50;
                     this.minSpeed = 0;
                     this.turningSpeed = 0.02;
                     this.turning = 0;
                     this.isJumping = false;
                     this.verticalSpeed = 0;
-                    this.gravity = -0.01;
+                    this.gravity = -0.02;
                     this.consecutiveTricks = 0;
                     this.trickRotation = new THREE.Vector3(0, 0, 0);
                     this.mountainHeight = mountainHeightFunc;
@@ -1210,14 +1211,20 @@
                     const acceleration = 0.5;
                     const friction = 0.98;
 
-                    // Apply acceleration or deceleration based on input
+                        // Apply acceleration or deceleration based on input without delta
                     if (this.keysPressed['KeyW']) {
-                        this.speed = Math.min(this.speed + acceleration * delta, this.maxSpeed);
+                        this.speed = Math.min(this.speed + acceleration, this.maxSpeed);
                     } else if (this.keysPressed['KeyS']) {
-                        this.speed = Math.max(this.speed - acceleration * delta, this.minSpeed);
+                        this.speed = Math.max(this.speed - acceleration, this.minSpeed);
                     } else {
                         this.speed *= friction;
                     }
+
+                    // Calculate new position using delta
+                    const moveDistance = this.speed * delta;
+                    const newX = this.mesh.position.x - moveDistance * Math.sin(this.mesh.rotation.y);
+                    const newZ = this.mesh.position.z - moveDistance * Math.cos(this.mesh.rotation.y);
+
 
                     // Turning the skier
                     if (this.keysPressed['KeyA']) {
@@ -1232,10 +1239,6 @@
                         this.jumpCharge = Math.min(this.jumpCharge + 0.005, this.maxJumpCharge);
                     }
 
-                    // Calculate new position
-                    const moveDistance = this.speed * delta;
-                    const newX = this.mesh.position.x - moveDistance * Math.sin(this.mesh.rotation.y);
-                    const newZ = this.mesh.position.z - moveDistance * Math.cos(this.mesh.rotation.y);
 
                     // Check boundaries
                     if (Math.abs(newX) < this.mapSize / 2 && Math.abs(newZ) < this.mapSize / 2) {
