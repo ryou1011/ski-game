@@ -295,7 +295,6 @@ export class GameManager {
 
         // Create skier
         this.skier = new Skier(this.mapSize, this.mountainHeight.bind(this), this, false, this.username);
-        this.scene.add(this.skier.mesh);
 
         // Start animation loop
         this.animate();
@@ -351,7 +350,7 @@ export class GameManager {
     addOtherPlayer(id, username) {
         const otherSkier = new Skier(this.mapSize, this.mountainHeight.bind(this), this, true, username);
         this.players[id] = otherSkier;
-        this.scene.add(otherSkier.mesh);
+
     }
 
     createTerrain() {

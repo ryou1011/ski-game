@@ -1,3 +1,6 @@
+// InputManager.js
+import { GameManager } from './GameManager.js'; // Ensure correct path if needed
+
 export class InputManager {
     constructor(gameManager) {
         if (InputManager.instance) {

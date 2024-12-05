@@ -1,3 +1,6 @@
+// SkiEquipmentManager.js
+import * as THREE from 'three';
+
 export class SkiEquipmentManager {
     constructor(scene, skiEquipmentPool) {
         this.scene = scene;

@@ -1,25 +1,15 @@
-import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
+// Skier.js
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export class Skier {
     constructor(mapSize, mountainHeightFunc, gameManager, isOtherPlayer = false, username = '') {
         this.gameManager = gameManager;
-
-        const bodyGeometry = new THREE.BoxGeometry(1, 3, 1);
-        const bodyMaterial = new THREE.MeshBasicMaterial({ color: isOtherPlayer ? 0xff0000 : 0x3366cc });
-        this.mesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
-
-        const skiGeometry = new THREE.BoxGeometry(0.5, 0.2, 4);
-        const skiMaterial = new THREE.MeshBasicMaterial({ color: 0x111111 });
-        this.leftSki = new THREE.Mesh(skiGeometry, skiMaterial);
-        this.rightSki = new THREE.Mesh(skiGeometry, skiMaterial);
-
-        this.leftSki.position.set(-0.6, -1.5, 0);
-        this.rightSki.position.set(0.6, -1.5, 0);
-
-        this.mesh.add(this.leftSki);
-        this.mesh.add(this.rightSki);
-
         this.mapSize = mapSize;
+        this.mountainHeight = mountainHeightFunc;
+        this.isOtherPlayer = isOtherPlayer;
+        this.username = username;
+
         this.speed = 0;
         this.maxSpeed = 50;
         this.minSpeed = 0;
@@ -30,38 +20,76 @@ export class Skier {
         this.gravity = -0.02;
         this.consecutiveTricks = 0;
         this.trickRotation = new THREE.Vector3(0, 0, 0);
-        this.mountainHeight = mountainHeightFunc;
-
-        this.isOtherPlayer = isOtherPlayer;
-        this.username = username;
-
-        // Set initial position above the terrain
-        const initialTerrainHeight = this.mountainHeight(0, 0);
-        this.mesh.position.set(0, initialTerrainHeight + 2, -this.mapSize / 2 + 10);
 
         this.jumpCharge = 0;
         this.maxJumpCharge = 0.5; // Maximum additional jump power
 
         this.trickName = '';
 
-        if (isOtherPlayer) {
-            // Add username label
-            const canvas = document.createElement('canvas');
-            canvas.width = 256;
-            canvas.height = 64;
-            const context = canvas.getContext('2d');
-            context.font = 'Bold 24px Arial';
-            context.fillStyle = '#ffffff';
-            context.textAlign = 'center';
-            context.fillText(this.username, 128, 32);
+        // Load the GLB model
+        this.loadModel();
+    }
 
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
-            this.label = new THREE.Sprite(spriteMaterial);
-            this.label.scale.set(10, 2.5, 1);
-            this.label.position.set(0, 4, 0);
-            this.mesh.add(this.label);
-        }
+    loadModel() {
+        const loader = new GLTFLoader();
+        loader.load(
+            './models/skier.glb',
+            (gltf) => {
+                this.mesh = gltf.scene;
+                this.mesh.scale.set(4, 4, 4); // **Scale the model 4x bigger**
+                this.mesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                // Set initial position above the terrain
+                const initialTerrainHeight = this.mountainHeight(0, 0);
+                this.mesh.position.set(0, initialTerrainHeight + 2, -this.mapSize / 2 + 10);
+
+                // Add username label for other players
+                if (this.isOtherPlayer) {
+                    this.addUsernameLabel();
+                }
+
+                // Initialize AnimationMixer if animations are present
+                if (gltf.animations && gltf.animations.length > 0) {
+                    this.mixer = new THREE.AnimationMixer(this.mesh);
+                    gltf.animations.forEach((clip) => {
+                        this.mixer.clipAction(clip).play();
+                    });
+                }
+
+                // Add the skier mesh to the scene
+                this.gameManager.scene.add(this.mesh);
+            },
+            undefined,
+            (error) => {
+                console.error('An error occurred while loading the skier model:', error);
+                // Optionally, set a flag to indicate loading failure
+                this.modelFailedToLoad = true;
+            }
+        );
+    }
+
+    addUsernameLabel() {
+        // Add username label
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 64;
+        const context = canvas.getContext('2d');
+        context.font = 'Bold 24px Arial';
+        context.fillStyle = '#ffffff';
+        context.textAlign = 'center';
+        context.fillText(this.username, 128, 32);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+        this.label = new THREE.Sprite(spriteMaterial);
+        this.label.scale.set(10, 2.5, 1);
+        this.label.position.set(0, 8, 0); // Adjusted Y position to account for scaling
+        this.mesh.add(this.label);
     }
 
     handleJump() {
@@ -74,9 +102,21 @@ export class Skier {
     }
 
     update(delta) {
+        if (this.modelFailedToLoad) {
+            // Handle the failure, e.g., display an error message or use a fallback model
+            return;
+        }
+
+        if (!this.mesh) return; // Wait until the model is loaded
+
         if (this.isOtherPlayer) {
             // Other players are updated via network messages
             return;
+        }
+
+        // Update animations if any
+        if (this.mixer) {
+            this.mixer.update(delta);
         }
 
         const acceleration = 0.5;
