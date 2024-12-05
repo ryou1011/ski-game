@@ -431,19 +431,36 @@
                     this.timeRemaining = 180;
                     this.username = '';
 
+                    // Initialize the scene
                     this.scene = new THREE.Scene();
-                    this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.005);
+                    this.setupSkybox();
 
+                    // Adjust fog settings for better skybox visibility
+                    this.scene.fog = new THREE.FogExp2(0xffffff, 0.0001); // Reduced density
+
+                    // Initialize the camera
                     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-                    this.renderer = new THREE.WebGLRenderer({ antialias: false }); // Disabled antialiasing
+
+                    // Initialize the renderer
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true }); // Enable antialiasing for smoother edges
                     this.renderer.setSize(window.innerWidth, window.innerHeight);
-                    this.renderer.setPixelRatio(window.devicePixelRatio); // Adjust for display
-                    this.renderer.setClearColor(0x87ceeb);
-                    this.renderer.shadowMap.enabled = false; // Disabled shadows
+                    this.renderer.setPixelRatio(window.devicePixelRatio);
+                    this.renderer.outputEncoding = THREE.sRGBEncoding; // Correct encoding for color textures
+                    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; // Realistic dynamic range
+                    this.renderer.toneMappingExposure = 1.0; // Adjust exposure as needed for brightness
+                    this.renderer.shadowMap.enabled = false; // Enable if using shadows
                     document.body.appendChild(this.renderer.domElement);
 
-                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-                    this.scene.add(ambientLight);
+                    // Initialize ambient light
+                    this.ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Adjust intensity as needed
+                    this.scene.add(this.ambientLight);
+
+                    // Initialize directional light (simulating sunlight)
+                    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                    this.directionalLight.position.set(100, 200, 100); // Position as needed
+                    this.directionalLight.castShadow = false; // Enable shadows if desired
+                    this.scene.add(this.directionalLight);
+
 
                     this.mapSize = 1000; // Increased map size
 
@@ -593,8 +610,6 @@
                         // Now the game is ready to start
                         this.isGameActive = true;
 
-                        // Start animation loop
-                        this.animate();
                     } catch (error) {
                         console.error('Error starting game:', error);
                     }
@@ -638,6 +653,9 @@
                     // Create skier
                     this.skier = new Skier(this.mapSize, this.mountainHeight.bind(this), false, this.username);
                     this.scene.add(this.skier.mesh);
+
+                    // Start animation loop
+                    this.animate();
                 }
 
                 connectToWebSocket() {
@@ -696,12 +714,13 @@
                 createTerrain() {
                     try {
                         const size = this.mapSize;
-                        const divisions = 128; // Reduced divisions
+                        const divisions = 256; // Increased subdivisions for finer displacement
 
+                        // Create the terrain geometry
                         const geometry = new THREE.PlaneGeometry(size, size, divisions, divisions);
                         geometry.rotateX(-Math.PI / 2);
 
-                        // Modify vertices using Simplex noise for mountainous terrain
+                        // Apply procedural displacement using mountainHeight function
                         const positionAttribute = geometry.attributes.position;
                         for (let i = 0; i < positionAttribute.count; i++) {
                             const x = positionAttribute.getX(i);
@@ -712,14 +731,61 @@
                         }
                         geometry.computeVertexNormals();
 
-                        const material = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Simplified material
+                        // Load the textures
+                        const textureLoader = new THREE.TextureLoader();
+                        const texturePath = './textures/snow_texture/'; // Ensure this path is correct relative to your HTML/JS file
+
+                        // Define texture filenames
+                        const textureFiles = {
+                            color: 'Snow009A_1K-JPG_Color.jpg',               // Diffuse/Color Map
+                            normal: 'Snow009A_1K-JPG_NormalGL.jpg',     // Normal Map
+                            roughness: 'Snow009A_1K-JPG_Roughness.jpg', // Roughness Map
+                            ao: 'Snow009A_1K-JPG_AmbientOcclusion.jpg', // Ambient Occlusion Map
+                            displacement: 'snow_02_disp_4k.jpg'         // Displacement Map
+                        };
+
+                        // Load all textures and store them in an object
+                        const textures = {};
+                        for (const [key, fileName] of Object.entries(textureFiles)) {
+                            const texture = textureLoader.load(`${texturePath}${fileName}`);
+                            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                            texture.repeat.set(50, 50); // Adjust repetition as needed
+
+                            // Set appropriate encoding
+                            if (key === 'color') {
+                                texture.encoding = THREE.sRGBEncoding;
+                            } else {
+                                texture.encoding = THREE.LinearEncoding;
+                            }
+
+                            textures[key] = texture;
+                        }
+
+                        // Create the material with all maps
+                        const material = new THREE.MeshStandardMaterial({
+                            map: textures.color,                   // Diffuse/Color Map
+                            normalMap: textures.normal,            // Normal Map
+                            displacementMap: textures.displacement,// Displacement Map
+                            displacementScale: 1.0,                // Displacement Scale
+                            roughnessMap: textures.roughness,      // Roughness Map
+                            aoMap: textures.ao,                    // Ambient Occlusion Map
+                            roughness: 0.9,                        // Base roughness
+                            metalness: 0.0,                        // Snow is non-metallic
+                        });
+
+                        // Assign uv2 for AO map
+                        geometry.setAttribute('uv2', new THREE.BufferAttribute(geometry.attributes.uv.array, 2));
+
+                        // Create the terrain mesh and add it to the scene
                         this.terrain = new THREE.Mesh(geometry, material);
-                        this.terrain.receiveShadow = false; // Disabled shadows
                         this.scene.add(this.terrain);
                     } catch (error) {
                         console.error('Error creating terrain:', error);
                     }
                 }
+
+
+
 
                 mountainHeight(x, z) {
                     const scale = 0.005;
@@ -755,6 +821,24 @@
 
                     this.scene.add(instancedTrees);
                 }
+
+                // In the GameManager class
+                setupSkybox() {
+                    const loader = new THREE.CubeTextureLoader();
+                    const skyboxImages = [
+                        'px.png', // Positive X
+                        'nx.png', // Negative X
+                        'py.png', // Positive Y
+                        'ny.png', // Negative Y
+                        'pz.png', // Positive Z
+                        'nz.png'  // Negative Z
+                    ];
+
+                    const skyboxTexture = loader.setPath('./textures/skybox/').load(skyboxImages);
+                    this.scene.background = skyboxTexture;
+                }
+
+
 
                 createRamps() {
                     const rampCount = 50;
@@ -879,18 +963,20 @@
                 animate() {
                     if (!this.isGameActive || this.isPaused) return;
 
+                    // Ensure the animation loop continues
                     requestAnimationFrame(() => this.animate());
 
                     const now = performance.now();
-                    let delta = (now - this.lastFrameTime) / 1000; // Convert to seconds
+                    let delta = (now - this.lastFrameTime) / 1000;
                     this.lastFrameTime = now;
 
                     // Cap delta to prevent large time steps
-                    if (delta > 1 / 30) delta = 1 / 30; // Cap at ~33ms for stability
+                    if (delta > 1 / 30) delta = 1 / 30;
 
                     // Proceed with updating game elements
                     this.updateGameElements(delta);
                 }
+
 
 
                 updateGameElements(delta) {
@@ -1002,14 +1088,34 @@
                 }
 
                 updateDayNightCycle(delta) {
+                    // Update the time of day
                     this.timeOfDay += delta * 0.01; // Adjust speed as needed
                     if (this.timeOfDay > 1) this.timeOfDay = 0;
 
+                    // Calculate ambient light intensity based on time of day
+                    const baseIntensity = 1.2; // Current ambient light intensity
+                    const intensityVariation = 0.6; // Variation amplitude
+
+                    // Sinusoidal calculation: intensity varies between (base - variation) and (base + variation)
+                    const newIntensity = baseIntensity + intensityVariation * Math.sin(this.timeOfDay * Math.PI * 2);
+
+                    // Clamp the intensity to a minimum value to prevent complete darkness
+                    this.ambientLight.intensity = Math.max(newIntensity, 0.2);
+                    console.log(`Ambient Light Intensity: ${this.ambientLight.intensity}`);
+
+                    // Optionally, adjust directional light intensity based on time of day
+                    if (this.directionalLight) {
+                        this.directionalLight.intensity = Math.max(newIntensity * 0.8, 0.1);
+                    }
+
+                    // Adjust fog color based on time of day for better visual effects
                     const color = new THREE.Color();
                     color.setHSL(0.6, 1, 0.5 * Math.sin(this.timeOfDay * Math.PI * 2) + 0.5);
                     this.scene.fog.color = color;
                     this.renderer.setClearColor(color);
                 }
+
+
 
                 sendPlayerUpdate() {
                     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
