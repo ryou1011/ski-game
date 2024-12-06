@@ -8,6 +8,7 @@ import { SkiEquipmentManager } from './SkiEquipmentManager.js';
 import { Ramp } from './Ramp.js';
 import { WeatherSystem } from './WeatherSystem.js';
 import { Skier } from './Skier.js';
+import { BattlePass } from './Battlepass.js';
 
 export class GameManager {
     constructor() {
@@ -22,6 +23,8 @@ export class GameManager {
         this.achievements = [];
         this.timeRemaining = 180;
         this.username = '';
+        this.battlePass = null; // Will be initialized after username is set
+        this.lastDistanceXP = 0; // For tracking distance-based XP
 
         // Initialize the scene
         this.scene = new THREE.Scene();
@@ -158,6 +161,7 @@ export class GameManager {
         document.getElementById('pause-menu').style.display = 'none';
         document.getElementById('game-over').style.display = 'none';
         document.getElementById('loading').style.display = 'none';
+        document.getElementById('finish-game').style.display = 'none';
     }
 
     showPauseMenu() {
@@ -166,7 +170,13 @@ export class GameManager {
     }
 
     setupMenuHandlers() {
+        // Main Menu Buttons
         document.getElementById('start-game').onclick = () => this.startGame();
+        document.getElementById('view-battle-pass').onclick = () => this.showBattlePassMenu();
+        document.getElementById('leaderboard').onclick = () => this.showLeaderboard();
+        document.getElementById('settings').onclick = () => this.showSettings();
+    
+        // Pause Menu Buttons
         document.getElementById('resume').onclick = () => {
             this.isPaused = false;
             document.getElementById('pause-menu').style.display = 'none';
@@ -174,9 +184,164 @@ export class GameManager {
         };
         document.getElementById('restart').onclick = () => this.startGame();
         document.getElementById('main-menu-button').onclick = () => this.showMainMenu();
-        document.getElementById('menu-button').onclick = () => this.showPauseMenu();
+        document.getElementById('settings-pause').onclick = () => this.showSettings();
+    
+        // Game Over Menu Buttons
         document.getElementById('restart-game').onclick = () => this.startGame();
         document.getElementById('game-over-menu').onclick = () => this.showMainMenu();
+    
+        // In-Game Menu Button
+        document.getElementById('menu-button').onclick = () => this.showPauseMenu();
+    
+        // Finish Game Button
+        document.getElementById('finish-game').onclick = () => {
+            if (this.isGameActive) {
+                this.gameOver();
+            }
+        };
+    
+        // Battle Pass Menu Buttons
+        document.getElementById('close-battle-pass').onclick = () => {
+            document.getElementById('battle-pass-menu').style.display = 'none';
+        };
+    
+        document.getElementById('upgrade-pass').onclick = () => {
+            if (this.battlePass) {
+                this.battlePass.upgradeToPremium();
+            }
+        };
+    
+        // Add keyboard event for ESC key to pause
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Escape' && this.isGameActive) {
+                this.showPauseMenu();
+            }
+        });
+    }
+    
+    showBattlePassMenu() {
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('battle-pass-menu').style.display = 'block';
+        // Update battle pass display
+        if (this.battlePass) {
+            this.battlePass.updateUI();
+        }
+    }
+    
+    showLeaderboard() {
+        // Fetch and display leaderboard data from Firebase
+        firebase.database().ref('gameStats')
+            .orderByChild('score')
+            .limitToLast(10)
+            .once('value')
+            .then((snapshot) => {
+                const leaderboardData = [];
+                snapshot.forEach((child) => {
+                    leaderboardData.unshift(child.val());
+                });
+                this.displayLeaderboard(leaderboardData);
+            });
+    }
+    
+    displayLeaderboard(data) {
+        const leaderboardMenu = document.createElement('div');
+        leaderboardMenu.className = 'menu';
+        leaderboardMenu.innerHTML = `
+            <h2>Leaderboard</h2>
+            <div class="leaderboard-container">
+                ${data.map((entry, index) => `
+                    <div class="leaderboard-entry">
+                        <span class="rank">#${index + 1}</span>
+                        <span class="username">${entry.username}</span>
+                        <span class="score">${entry.score}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <button id="close-leaderboard">Close</button>
+        `;
+        document.body.appendChild(leaderboardMenu);
+    
+        document.getElementById('close-leaderboard').onclick = () => {
+            document.body.removeChild(leaderboardMenu);
+        };
+    }
+    
+    showSettings() {
+        // Create and display settings menu
+        const settingsMenu = document.createElement('div');
+        settingsMenu.className = 'menu';
+        settingsMenu.innerHTML = `
+            <h2>Settings</h2>
+            <div class="settings-container">
+                <div class="setting">
+                    <label for="music-volume">Music Volume</label>
+                    <input type="range" id="music-volume" min="0" max="100" value="50">
+                </div>
+                <div class="setting">
+                    <label for="sfx-volume">SFX Volume</label>
+                    <input type="range" id="sfx-volume" min="0" max="100" value="50">
+                </div>
+                <div class="setting">
+                    <label for="graphics-quality">Graphics Quality</label>
+                    <select id="graphics-quality">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+            <button id="save-settings">Save</button>
+            <button id="close-settings">Close</button>
+        `;
+        document.body.appendChild(settingsMenu);
+    
+        document.getElementById('save-settings').onclick = () => {
+            this.saveSettings();
+            document.body.removeChild(settingsMenu);
+        };
+    
+        document.getElementById('close-settings').onclick = () => {
+            document.body.removeChild(settingsMenu);
+        };
+    }
+    
+    saveSettings() {
+        const musicVolume = document.getElementById('music-volume').value;
+        const sfxVolume = document.getElementById('sfx-volume').value;
+        const graphicsQuality = document.getElementById('graphics-quality').value;
+    
+        // Save settings to localStorage
+        localStorage.setItem('gameSettings', JSON.stringify({
+            musicVolume,
+            sfxVolume,
+            graphicsQuality
+        }));
+    
+        // Apply settings
+        this.applySettings({
+            musicVolume,
+            sfxVolume,
+            graphicsQuality
+        });
+    }
+    
+    applySettings(settings) {
+        // Apply graphics quality
+        switch (settings.graphicsQuality) {
+            case 'low':
+                this.renderer.setPixelRatio(1);
+                break;
+            case 'medium':
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+                break;
+            case 'high':
+                this.renderer.setPixelRatio(window.devicePixelRatio * 1.5);
+                break;
+        }
+    
+        // Apply volume settings if audio is implemented
+        // this.audio.setMusicVolume(settings.musicVolume / 100);
+        // this.audio.setSFXVolume(settings.sfxVolume / 100);
     }
 
     startGame() {
@@ -226,6 +391,9 @@ export class GameManager {
             document.getElementById('speed').textContent = `Speed: 0`;
             document.getElementById('trick-multiplier').textContent = `Trick Multiplier: 1x`;
             document.getElementById('timer').textContent = `Time: ${this.timeRemaining}s`;
+            document.getElementById('finish-game').style.display = 'block';
+
+
 
             // Start game timer
             clearInterval(this.gameTimer);
@@ -534,11 +702,123 @@ export class GameManager {
     gameOver() {
         this.isGameActive = false;
         clearInterval(this.gameTimer);
-        this.updateHighScores();
-
+    
+        // Calculate final XP based on performance metrics
+        const baseScoreXP = Math.floor(this.score / 100);  // 1 XP per 100 points
+        const coinBonus = this.coins * 10;                 // 10 XP per coin
+        const timeBonus = Math.max(0, this.timeRemaining) * 2;  // 2 XP per second remaining
+        const trickBonus = this.trickMultiplier * 100;    // XP based on trick multiplier
+        const distanceBonus = Math.floor(
+            Math.sqrt(
+                Math.pow(this.skier.mesh.position.x, 2) +
+                Math.pow(this.skier.mesh.position.z, 2)
+            ) / 10
+        ); // Distance traveled bonus
+    
+        const finalXP = baseScoreXP + coinBonus + timeBonus + trickBonus + distanceBonus;
+    
+        // Award XP through battle pass
+        if (this.battlePass) {
+            this.battlePass.addXP(finalXP);
+        }
+    
+        // Generate achievement list
+        const achievementsList = this.achievements.map(achievement => {
+            switch (achievement) {
+                case 'score_10000':
+                    return 'Score Master (10,000 points)';
+                case 'coins_50':
+                    return 'Coin Collector (50 coins)';
+                case 'tricks_5':
+                    return 'Trick Master (5 consecutive tricks)';
+                default:
+                    return achievement;
+            }
+        }).join('<br>');
+    
+        // Update UI with detailed stats
         document.getElementById('game-over').style.display = 'block';
         document.getElementById('final-score').textContent = `Final Score: ${this.score}`;
-        document.getElementById('final-stats').textContent = `Coins Collected: ${this.coins}`;
+        document.getElementById('final-stats').innerHTML = `
+            <div class="stats-container">
+                <h3>Game Statistics</h3>
+                <div class="stat-row">Coins Collected: ${this.coins}</div>
+                <div class="stat-row">Time Remaining: ${this.timeRemaining}s</div>
+                <div class="stat-row">Final Trick Multiplier: ${this.trickMultiplier}x</div>
+                <div class="stat-row">Distance Traveled: ${Math.floor(distanceBonus * 10)}m</div>
+                
+                <h3>XP Breakdown</h3>
+                <div class="stat-row">Base Score XP: ${baseScoreXP}</div>
+                <div class="stat-row">Coin Bonus: ${coinBonus}</div>
+                <div class="stat-row">Time Bonus: ${timeBonus}</div>
+                <div class="stat-row">Trick Bonus: ${trickBonus}</div>
+                <div class="stat-row">Distance Bonus: ${distanceBonus}</div>
+                <div class="stat-row total-xp">Total XP Earned: ${finalXP}</div>
+                
+                ${this.achievements.length > 0 ? `
+                    <h3>Achievements Earned</h3>
+                    <div class="achievements-list">${achievementsList}</div>
+                ` : ''}
+            </div>
+        `;
+    
+        // Update high scores
+        this.updateHighScores();
+    
+        // Clean up multiplayer
+        if (this.socket) {
+            this.socket.close();
+        }
+    
+        // Reset game objects
+        this.resetGameObjects();
+    
+        // Hide game UI elements
+        document.getElementById('finish-game').style.display = 'none';
+    
+        // Add CSS animation class for smooth transition
+        const gameOver = document.getElementById('game-over');
+        gameOver.classList.add('fade-in');
+        
+        // Play game over sound if implemented
+        // this.playGameOverSound();
+    
+        // Save final stats to Firebase if needed
+        this.saveFinalStats(finalXP);
+    }
+    
+    resetGameObjects() {
+        // Reset player state
+        if (this.skier) {
+            this.skier.maxSpeed = this.skier.defaultMaxSpeed;
+            this.skier.turningSpeed = this.skier.defaultTurningSpeed;
+        }
+    
+        // Clear power-ups
+        this.powerUps.forEach(powerUp => {
+            powerUp.visible = false;
+            this.powerUpPool.push(powerUp);
+        });
+        this.powerUps = [];
+    
+        // Reset any active particles
+        this.particlePool.reset();
+    }
+    
+    saveFinalStats(finalXP) {
+        if (!this.username) return;
+    
+        const gameStats = {
+            username: this.username,
+            score: this.score,
+            coins: this.coins,
+            xpEarned: finalXP,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            achievements: this.achievements
+        };
+    
+        // Save to Firebase
+        firebase.database().ref('gameStats').push(gameStats);
     }
 
     updateHighScores() {

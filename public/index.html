@@ -2,41 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>3D Skiing Game - Multiplayer with New Features</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Skiing Game - Multiplayer with Battle Pass</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Loading Screen -->
     <div id="loading" class="menu">
         <h2>Loading...</h2>
         <div style="width: 200px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px;">
-            <div id="loading-progress" style="width: 0%; height: 100%; background: #4287f5; border-radius: 10px; transition: width 0.3s;"></div>
+            <div id="loading-progress"></div>
         </div>
     </div>
-    
+
+    <!-- Main Menu -->
     <div id="main-menu" class="menu">
         <h2>Ski Adventure Multiplayer</h2>
-        <input type="text" id="username-input" placeholder="Enter Username" maxlength="10" style="padding: 10px; font-size: 16px;">
+        <input type="text" id="username-input" placeholder="Enter Username" maxlength="10">
         <button id="start-game">Start Game</button>
-        <!-- Additional menu buttons if needed -->
+        <button id="view-battle-pass">Battle Pass</button>
+        <button id="leaderboard">Leaderboard</button>
+        <button id="settings">Settings</button>
     </div>
 
+    <!-- Pause Menu -->
     <div id="pause-menu" class="menu">
         <h2>Game Paused</h2>
         <button id="resume">Resume</button>
         <button id="restart">Restart</button>
         <button id="main-menu-button">Main Menu</button>
+        <button id="settings-pause">Settings</button>
     </div>
 
+    <!-- Game Over Screen -->
     <div id="game-over" class="menu">
         <h2>Game Over!</h2>
         <div id="final-score"></div>
         <div id="final-stats"></div>
+        <div id="xp-earned"></div>
         <button id="restart-game">Play Again</button>
         <button id="game-over-menu">Main Menu</button>
     </div>
 
-    <button class="menu-button" id="menu-button">☰ Menu</button>
+    <!-- Battle Pass Menu -->
+    <div id="battle-pass-menu" class="menu">
+        <h2>Battle Pass</h2>
+        <div class="battle-pass-header">
+            <div class="pass-type">FREE PASS</div>
+            <button id="upgrade-pass">Upgrade to Premium</button>
+        </div>
+        <div class="battle-pass-content">
+            <div class="battle-pass-progress">
+                <div id="current-tier">Tier 1</div>
+                <div class="battle-pass-progress-bar">
+                    <div id="battle-pass-progress"></div>
+                </div>
+                <div id="current-xp">0/1000 XP</div>
+            </div>
+            <div class="rewards-container">
+                <div class="free-rewards"></div>
+                <div class="premium-rewards"></div>
+            </div>
+        </div>
+        <button id="close-battle-pass">Close</button>
+    </div>
 
+    <!-- Game UI -->
     <div class="ui-container">
         <div id="score">Score: 0</div>
         <div id="speed">Speed: 0</div>
@@ -44,44 +75,39 @@
         <div id="coins">Coins: 0</div>
     </div>
 
+    <!-- Timer -->
     <div id="timer">Time: 180s</div>
 
+    <!-- Finish Game Button -->
+    <button id="finish-game" class="finish-game-button">Finish Game</button>
+
+    <!-- Menu Button -->
+    <button class="menu-button" id="menu-button">☰ Menu</button>
+
+    <!-- Controls Display -->
     <div id="controls">
-        W/S - Speed | A/D - Turn Skier | Arrow Keys - Rotate Camera | Space - Jump | Q/E/Z - Tricks | ESC - Pause
+        W/S - Speed | A/D - Turn | Arrow Keys - Camera | Space - Jump |
+        Q/E/Z - Tricks | ESC - Pause
     </div>
 
+    <!-- Trick Text Display -->
     <div class="trick-text" id="trick-text"></div>
 
-    <!-- Minimap container -->
+    <!-- Minimap -->
     <div id="minimap">
         <canvas id="minimap-canvas" width="200" height="200"></canvas>
     </div>
 
-    <!-- Weather overlay -->
+    <!-- Weather Effects -->
     <canvas id="weather-overlay" class="weather-overlay"></canvas>
 
-    <!-- Include Three.js -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-
-    <!-- Include Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="firebaseConfig.js"></script>
 
-    <script>
-     // Your Firebase configuration
-     var firebaseConfig = {
-        apiKey: "AIzaSyD3pj9dFg8VDblNoDDq50PUSyrPVSRNZv0",
-        authDomain: "ski-gameryanyou.firebaseapp.com",
-        databaseURL: "https://ski-gameryanyou-default-rtdb.firebaseio.com",
-        projectId: "ski-gameryanyou",
-        storageBucket: "ski-gameryanyou.appspot.com",
-        messagingSenderId: "616326505701",
-        appId: "1:616326505701:web:580a7db1919c3d9d68a00c"
-     };
-     // Initialize Firebase
-     firebase.initializeApp(firebaseConfig);
-    </script>
-
+    <!-- Import Map -->
     <script type="importmap">
     {
         "imports": {
@@ -91,7 +117,7 @@
     }
     </script>
 
-    <!-- Main JavaScript file -->
+    <!-- Main Game Script -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
