@@ -490,49 +490,108 @@ export class GameManager {
 
     connectToWebSocket() {
         this.socket = new WebSocket('ws://localhost:8080');
-
+    
         this.socket.addEventListener('open', () => {
             console.log('Connected to WebSocket server');
             // Send username to the server
-            this.socket.send(JSON.stringify({ type: 'init', username: this.username }));
+            this.socket.send(JSON.stringify({ 
+                type: 'init', 
+                username: this.username 
+            }));
         });
-
+    
         this.socket.addEventListener('message', (event) => {
             const data = JSON.parse(event.data);
-
+    
             switch (data.type) {
                 case 'init':
-                    // Receive player ID from the server
                     this.playerId = data.id;
+                    // Use shared seed for terrain
+                    if (data.gameState.seed) {
+                        this.sharedSeed = data.gameState.seed;
+                    }
                     break;
+    
                 case 'player_joined':
                     if (data.id !== this.playerId) {
-                        // Add new player
                         this.addOtherPlayer(data.id, data.username);
+                        // Set initial position if provided
+                        if (data.position && this.players[data.id]) {
+                            const player = this.players[data.id];
+                            player.mesh.position.set(
+                                data.position.x,
+                                data.position.y,
+                                data.position.z
+                            );
+                            player.mesh.rotation.y = data.position.rotationY;
+                        }
                     }
                     break;
+    
                 case 'update':
-                    // Update other player's position
                     if (data.id !== this.playerId && this.players[data.id]) {
-                        this.players[data.id].mesh.position.set(data.position.x, data.position.y, data.position.z);
-                        this.players[data.id].mesh.rotation.y = data.position.rotationY;
+                        const player = this.players[data.id];
+                        // Smoothly interpolate to new position
+                        const targetPosition = new THREE.Vector3(
+                            data.position.x,
+                            data.position.y,
+                            data.position.z
+                        );
+                        player.mesh.position.lerp(targetPosition, 0.3);
+                        player.mesh.rotation.y = data.position.rotationY;
+                        
+                        // Update player state if provided
+                        if (data.state) {
+                            player.updateState(data.state);
+                        }
                     }
                     break;
+    
                 case 'player_left':
-                    // Remove player
                     if (this.players[data.id]) {
                         this.scene.remove(this.players[data.id].mesh);
                         delete this.players[data.id];
                     }
                     break;
-                default:
-                    break;
             }
         });
-
+    
         this.socket.addEventListener('close', () => {
             console.log('Disconnected from WebSocket server');
+            // Optional: Implement reconnection logic
         });
+    
+        this.socket.addEventListener('error', (error) => {
+            console.error('WebSocket error:', error);
+        });
+    }
+    
+    sendPlayerUpdate() {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            const now = Date.now();
+            if (!this.lastNetworkUpdate || now - this.lastNetworkUpdate > 50) {
+                const position = {
+                    x: this.skier.mesh.position.x,
+                    y: this.skier.mesh.position.y,
+                    z: this.skier.mesh.position.z,
+                    rotationY: this.skier.mesh.rotation.y
+                };
+                
+                const state = {
+                    speed: this.skier.speed,
+                    isJumping: this.skier.isJumping,
+                    score: this.score
+                };
+    
+                this.socket.send(JSON.stringify({ 
+                    type: 'update', 
+                    position,
+                    state 
+                }));
+                
+                this.lastNetworkUpdate = now;
+            }
+        }
     }
 
     addOtherPlayer(id, username) {
