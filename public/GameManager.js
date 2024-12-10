@@ -23,7 +23,7 @@ export class GameManager {
         this.achievements = [];
         this.timeRemaining = 180;
         this.username = '';
-        this.battlePass = null; // Will be initialized after username is set
+        this.battlePass = new BattlePass(this);
         this.lastDistanceXP = 0; // For tracking distance-based XP
 
         // Initialize the scene
@@ -349,7 +349,7 @@ export class GameManager {
             // Get the username from the input
             const usernameInput = document.getElementById('username-input');
             this.username = usernameInput.value.trim() || 'Player';
-
+    
             // Clear previous game data
             this.hideMenus();
             this.isGameActive = false;
@@ -364,11 +364,11 @@ export class GameManager {
             this.coinsMeshes = [];
             this.ramps = [];
             this.treesPositions = [];
-
+    
             // Reset camera angles
             this.cameraOffsetAngle = 0;
             this.cameraTargetOffsetAngle = 0;
-
+    
             // Clear scene except lights and skybox
             const objectsToRemove = [];
             this.scene.traverse((child) => {
@@ -377,14 +377,14 @@ export class GameManager {
                 }
             });
             objectsToRemove.forEach(obj => this.scene.remove(obj));
-
+    
             // Re-add lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             this.scene.add(ambientLight);
-
+    
             // Initialize game after loading shared seed and terrain
             this.initializeGameWithSeed();
-
+    
             // Update UI
             document.getElementById('score').textContent = `Score: ${this.score}`;
             document.getElementById('coins').textContent = `Coins: ${this.coins}`;
@@ -392,35 +392,55 @@ export class GameManager {
             document.getElementById('trick-multiplier').textContent = `Trick Multiplier: 1x`;
             document.getElementById('timer').textContent = `Time: ${this.timeRemaining}s`;
             document.getElementById('finish-game').style.display = 'block';
-
-
-
+    
+            // Initialize or show battle pass display
+            if (this.battlePass) {
+                // Create simplified battle pass display for in-game
+                const roundedCurrentXP = Math.round(this.battlePass.currentXP);
+                const roundedRequiredXP = Math.round(this.battlePass.getRequiredXP(this.battlePass.currentTier));
+                
+                const battlePassContainer = document.createElement('div');
+                battlePassContainer.className = 'battle-pass-container';
+                battlePassContainer.innerHTML = `
+                    <div class="battle-pass-header">
+                        <div class="pass-type">${this.battlePass.isPremium ? 'PREMIUM PASS' : 'FREE PASS'}</div>
+                    </div>
+                    <div id="current-tier">Tier ${this.battlePass.currentTier}</div>
+                    <div class="battle-pass-progress-bar">
+                        <div id="battle-pass-progress"></div>
+                    </div>
+                    <div id="current-xp">${roundedCurrentXP}/${roundedRequiredXP} XP</div>
+                `;
+                document.body.appendChild(battlePassContainer);
+                this.battlePass.updateUI(); // Update the progress bar initially
+            }
+    
             // Start game timer
             clearInterval(this.gameTimer);
             this.gameTimer = setInterval(() => {
                 if (!this.isPaused && this.isGameActive) {
                     this.timeRemaining--;
                     this.updateTimer();
-
+    
                     if (this.timeRemaining <= 0) {
                         this.gameOver();
                     }
                 }
             }, 1000);
-
+    
             // Reset multiplayer data
             this.players = {};
             this.playerId = null;
-
+    
             // Reconnect to the WebSocket server
             if (this.socket) {
                 this.socket.close();
             }
             this.connectToWebSocket();
-
+    
             // Now the game is ready to start
             this.isGameActive = true;
-
+    
         } catch (error) {
             console.error('Error starting game:', error);
         }
@@ -702,7 +722,7 @@ export class GameManager {
     gameOver() {
         this.isGameActive = false;
         clearInterval(this.gameTimer);
-    
+     
         // Calculate final XP based on performance metrics
         const baseScoreXP = Math.floor(this.score / 100);  // 1 XP per 100 points
         const coinBonus = this.coins * 10;                 // 10 XP per coin
@@ -714,14 +734,20 @@ export class GameManager {
                 Math.pow(this.skier.mesh.position.z, 2)
             ) / 10
         ); // Distance traveled bonus
-    
+     
         const finalXP = baseScoreXP + coinBonus + timeBonus + trickBonus + distanceBonus;
-    
+     
         // Award XP through battle pass
         if (this.battlePass) {
             this.battlePass.addXP(finalXP);
         }
-    
+     
+        // Remove in-game battle pass display
+        const battlePassContainer = document.querySelector('.battle-pass-container');
+        if (battlePassContainer) {
+            battlePassContainer.remove();
+        }
+     
         // Generate achievement list
         const achievementsList = this.achievements.map(achievement => {
             switch (achievement) {
@@ -735,7 +761,7 @@ export class GameManager {
                     return achievement;
             }
         }).join('<br>');
-    
+     
         // Update UI with detailed stats
         document.getElementById('game-over').style.display = 'block';
         document.getElementById('final-score').textContent = `Final Score: ${this.score}`;
@@ -761,31 +787,65 @@ export class GameManager {
                 ` : ''}
             </div>
         `;
-    
+     
         // Update high scores
         this.updateHighScores();
-    
+     
         // Clean up multiplayer
         if (this.socket) {
             this.socket.close();
         }
-    
+     
         // Reset game objects
         this.resetGameObjects();
-    
+     
         // Hide game UI elements
         document.getElementById('finish-game').style.display = 'none';
-    
+     
         // Add CSS animation class for smooth transition
         const gameOver = document.getElementById('game-over');
         gameOver.classList.add('fade-in');
         
         // Play game over sound if implemented
         // this.playGameOverSound();
-    
+     
         // Save final stats to Firebase if needed
         this.saveFinalStats(finalXP);
-    }
+     }
+     
+     resetGameObjects() {
+        // Reset player state
+        if (this.skier) {
+            this.skier.maxSpeed = this.skier.defaultMaxSpeed;
+            this.skier.turningSpeed = this.skier.defaultTurningSpeed;
+        }
+     
+        // Clear power-ups
+        this.powerUps.forEach(powerUp => {
+            powerUp.visible = false;
+            this.powerUpPool.push(powerUp);
+        });
+        this.powerUps = [];
+     
+        // Reset any active particles
+        this.particlePool.reset();
+     }
+     
+     saveFinalStats(finalXP) {
+        if (!this.username) return;
+     
+        const gameStats = {
+            username: this.username,
+            score: this.score,
+            coins: this.coins,
+            xpEarned: finalXP,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            achievements: this.achievements
+        };
+     
+        // Save to Firebase
+        firebase.database().ref('gameStats').push(gameStats);
+     }
     
     resetGameObjects() {
         // Reset player state

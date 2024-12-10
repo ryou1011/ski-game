@@ -21,6 +21,9 @@ export class BattlePass {
                 5: { type: 'skis', id: 'basic_red_skis', stats: { speed: 1.1, control: 1.0 } },
                 10: { type: 'coins', amount: 200 },
                 15: { type: 'character', id: 'basic_snowboarder' },
+                20: { type: 'trail_effect', id: 'basic_snow_trail' },
+                25: { type: 'coins', amount: 300 },
+                30: { type: 'trick_animation', id: 'basic_flip' },
                 // ... more free rewards
             },
             premium: {
@@ -28,6 +31,9 @@ export class BattlePass {
                 5: { type: 'skis', id: 'golden_skis', stats: { speed: 1.3, control: 1.2 } },
                 10: { type: 'trail_effect', id: 'rainbow_trail' },
                 15: { type: 'trick_animation', id: 'backflip_twist' },
+                20: { type: 'character', id: 'elite_snowboarder', stats: { speed: 1.4, control: 1.3 } },
+                25: { type: 'trail_effect', id: 'fire_trail' },
+                30: { type: 'trick_animation', id: 'triple_cork' },
                 // ... more premium rewards
             }
         };
@@ -48,13 +54,34 @@ export class BattlePass {
         });
     }
 
+    upgradeToPremium() {
+        this.isPremium = true;
+        this.saveProgress();
+        this.updateUI();
+
+        // Check for unclaimed premium rewards at current and previous tiers
+        for (let tier = 1; tier <= this.currentTier; tier++) {
+            if (this.rewards.premium[tier] && !this.claimedRewards[`premium_${tier}`]) {
+                this.showRewardNotification(this.rewards.premium[tier], 'premium');
+            }
+        }
+    }
+
     addXP(amount) {
         this.currentXP += amount;
+        
+        // Check for tier ups
         while (this.currentXP >= this.getRequiredXP(this.currentTier) && this.currentTier < this.maxTier) {
             this.currentXP -= this.getRequiredXP(this.currentTier);
             this.currentTier++;
             this.onTierUp();
         }
+        
+        // Cap XP at max for current tier
+        if (this.currentTier === this.maxTier) {
+            this.currentXP = Math.min(this.currentXP, this.getRequiredXP(this.currentTier));
+        }
+
         this.saveProgress();
         this.updateUI();
     }
@@ -102,12 +129,36 @@ export class BattlePass {
         this.claimedRewards[rewardKey] = true;
         this.saveProgress();
         this.updateUI();
+
+        // Remove the notification after claiming
+        const notification = document.querySelector('.battle-pass-notification');
+        if (notification) {
+            notification.remove();
+        }
+    }
+
+    unlockCharacter(id, stats) {
+        // Implementation for unlocking characters
+        console.log(`Unlocked character: ${id}`);
+        // Add character to player's inventory
+    }
+
+    unlockTrailEffect(id) {
+        // Implementation for unlocking trail effects
+        console.log(`Unlocked trail effect: ${id}`);
+        // Add trail effect to player's inventory
+    }
+
+    unlockTrickAnimation(id) {
+        // Implementation for unlocking trick animations
+        console.log(`Unlocked trick animation: ${id}`);
+        // Add trick animation to player's inventory
     }
 
     saveProgress() {
         this.userBattlePassRef.set({
             currentTier: this.currentTier,
-            currentXP: this.currentXP,
+            currentXP: Math.round(this.currentXP),
             isPremium: this.isPremium,
             claimedRewards: this.claimedRewards
         });
@@ -119,12 +170,16 @@ export class BattlePass {
         notification.innerHTML = `
             <h3>New ${type === 'premium' ? 'Premium' : 'Free'} Reward Unlocked!</h3>
             <p>${this.getRewardDescription(reward)}</p>
-            <button onclick="gameManger.battlePass.claimReward(${this.currentTier}, '${type}')">
+            <button onclick="gameManager.battlePass.claimReward(${this.currentTier}, '${type}')">
                 Claim Reward
             </button>
         `;
         document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 5000);
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
     }
 
     getRewardDescription(reward) {
@@ -145,15 +200,37 @@ export class BattlePass {
     }
 
     updateUI() {
-        // Update battle pass UI elements
-        const progressElement = document.getElementById('battle-pass-progress');
-        if (progressElement) {
-            const progress = (this.currentXP / this.getRequiredXP(this.currentTier)) * 100;
-            progressElement.style.width = `${progress}%`;
-        }
+        // Update both menu and in-game battle pass displays
+        const progressElements = document.querySelectorAll('#battle-pass-progress');
+        progressElements.forEach(progressElement => {
+            if (progressElement) {
+                const progress = (this.currentXP / this.getRequiredXP(this.currentTier)) * 100;
+                progressElement.style.width = `${progress}%`;
+            }
+        });
 
-        document.getElementById('current-tier').textContent = `Tier ${this.currentTier}`;
-        document.getElementById('current-xp').textContent = 
-            `${this.currentXP}/${this.getRequiredXP(this.currentTier)} XP`;
+        const tierElements = document.querySelectorAll('#current-tier');
+        tierElements.forEach(element => {
+            if (element) {
+                element.textContent = `Tier ${this.currentTier}`;
+            }
+        });
+
+        const xpElements = document.querySelectorAll('#current-xp');
+        xpElements.forEach(element => {
+            if (element) {
+                const roundedCurrentXP = Math.round(this.currentXP);
+                const roundedRequiredXP = Math.round(this.getRequiredXP(this.currentTier));
+                element.textContent = `${roundedCurrentXP}/${roundedRequiredXP} XP`;
+            }
+        });
+
+        // Update pass type displays
+        const passTypeElements = document.querySelectorAll('.pass-type');
+        passTypeElements.forEach(element => {
+            if (element) {
+                element.textContent = this.isPremium ? 'PREMIUM PASS' : 'FREE PASS';
+            }
+        });
     }
 }
