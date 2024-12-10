@@ -6,7 +6,8 @@ export class Ramp {
         const geometry = new THREE.BoxGeometry(5, 1, 10);
         const material = new THREE.MeshBasicMaterial({ color: 0x8B4513 });
         this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.rotation.set(0, rotation, -Math.PI / 6); // Tilted upwards
+        // Reduce the tilt angle from -Math.PI / 6 to a gentler slope
+        this.mesh.rotation.set(0, rotation, -Math.PI / 12); // Changed from -Math.PI / 6
         this.mesh.position.copy(position);
         scene.add(this.mesh);
     }
