@@ -12,17 +12,19 @@ export class Skier {
 
         this.speed = 0;
         this.maxSpeed = 50;
+        this.defaultMaxSpeed = 50;
         this.minSpeed = 0;
         this.turningSpeed = 0.02;
+        this.defaultTurningSpeed = 0.02;
         this.turning = 0;
         this.isJumping = false;
         this.verticalSpeed = 0;
-        this.gravity = -0.02;
+        this.gravity = -0.05;  // Increased gravity effect
         this.consecutiveTricks = 0;
         this.trickRotation = new THREE.Vector3(0, 0, 0);
 
         this.jumpCharge = 0;
-        this.maxJumpCharge = 0.5; // Maximum additional jump power
+        this.maxJumpCharge = 0.5;
 
         this.trickName = '';
 
@@ -36,7 +38,7 @@ export class Skier {
             './models/skier.glb',
             (gltf) => {
                 this.mesh = gltf.scene;
-                this.mesh.scale.set(4, 4, 4); // **Scale the model 4x bigger**
+                this.mesh.scale.set(4, 4, 4);
                 this.mesh.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
@@ -67,14 +69,12 @@ export class Skier {
             undefined,
             (error) => {
                 console.error('An error occurred while loading the skier model:', error);
-                // Optionally, set a flag to indicate loading failure
                 this.modelFailedToLoad = true;
             }
         );
     }
 
     addUsernameLabel() {
-        // Add username label
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 64;
@@ -88,7 +88,7 @@ export class Skier {
         const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
         this.label = new THREE.Sprite(spriteMaterial);
         this.label.scale.set(10, 2.5, 1);
-        this.label.position.set(0, 8, 0); // Adjusted Y position to account for scaling
+        this.label.position.set(0, 8, 0);
         this.mesh.add(this.label);
     }
 
@@ -103,14 +103,12 @@ export class Skier {
 
     update(delta) {
         if (this.modelFailedToLoad) {
-            // Handle the failure, e.g., display an error message or use a fallback model
             return;
         }
 
-        if (!this.mesh) return; // Wait until the model is loaded
+        if (!this.mesh) return;
 
         if (this.isOtherPlayer) {
-            // Other players are updated via network messages
             return;
         }
 
@@ -122,7 +120,7 @@ export class Skier {
         const acceleration = 0.5;
         const friction = 0.98;
 
-        // Apply acceleration or deceleration based on input without delta
+        // Apply acceleration or deceleration based on input
         if (this.gameManager.inputManager.keysPressed['KeyW']) {
             this.speed = Math.min(this.speed + acceleration, this.maxSpeed);
         } else if (this.gameManager.inputManager.keysPressed['KeyS']) {
@@ -160,7 +158,10 @@ export class Skier {
         }
 
         if (this.isJumping) {
+            // Apply gravity with a stronger effect
             this.verticalSpeed += this.gravity * delta * 60;
+            // Cap the maximum vertical speed to prevent excessive heights
+            this.verticalSpeed = Math.max(this.verticalSpeed, -2);
             this.mesh.position.y += this.verticalSpeed * delta * 60;
 
             // Rotate during tricks
@@ -206,7 +207,7 @@ export class Skier {
 
             if (onRamp && this.speed > 0.1 && !this.isJumping) {
                 this.isJumping = true;
-                this.verticalSpeed = this.speed * 0.5;
+                this.verticalSpeed = this.speed * 0.05;  // Reduced jump velocity
             }
         }
 
@@ -241,7 +242,6 @@ export class Skier {
                     this.mesh.position.z
                 )
             );
-            // No additional initialization needed as createParticle handles it
         }
     }
 
